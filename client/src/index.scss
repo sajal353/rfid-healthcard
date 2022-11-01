@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+input,
+textarea {
+  @apply border border-gray-300 rounded-md bg-transparent p-4 px-5 w-full;
+}

@@ -95,4 +95,7 @@
   "ts-node": {
     "esm": true
   },
+  "exclude": [
+    "client"
+  ]
 }

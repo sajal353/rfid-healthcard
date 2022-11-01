@@ -2,6 +2,9 @@ import { SerialPort } from "serialport";
 import { ReadlineParser } from "@serialport/parser-readline";
 import prompts from "prompts";
 import { v4 as uuid } from "uuid";
+import open from "open";
+import fetch from "node-fetch";
+import { start } from "./server";
 
 const connect = async () => {
   let serialport;
@@ -20,6 +23,11 @@ const connect = async () => {
     message: "Select a port",
     choices: portList,
   });
+
+  if (!selectedPort.value) {
+    console.error("No hardware found 🚫");
+    process.exit(12);
+  }
 
   serialport = new SerialPort({ path: selectedPort.value, baudRate: 115200 });
 
@@ -59,6 +67,7 @@ const connect = async () => {
             uid: clearedData[3],
           };
           console.log(patientData);
+          open(`http://localhost:3000/p/${patientData.uid}`);
         } else {
           console.log("Invalid data format 🙅");
         }
@@ -83,18 +92,37 @@ const connect = async () => {
       message: "Enter patient department",
     });
 
+    const uniqueId = uuid();
+
     if (name.value && id.value && dept.value) {
-      const data = `write ${name.value}, ${id.value}, ${dept.value}, ${uuid()}`;
+      const data = `write ${name.value}, ${id.value}, ${dept.value}, ${uniqueId}`;
 
       serialport.write(data);
 
       const parser = serialport.pipe(new ReadlineParser({ delimiter: "\r\n" }));
-      parser.on("data", (data: string) => {
+      parser.on("data", async (data: string) => {
         if (data == "Write Mode") {
           console.log("Ready to write. 💳✍️");
         }
         if (data === "success") {
           console.log("Write success ✅");
+          console.log("Creating a new patient profile... 📝");
+          const res = await fetch("http://localhost:4000/profile", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: name.value,
+              id: id.value,
+              dept: dept.value,
+              uid: uniqueId,
+            }),
+          });
+          if (res.status === 200) {
+            console.log("Patient profile created ✅");
+            await open(`http://localhost:3000/p/${uniqueId}`);
+          }
           process.exit(0);
         }
         if (data === "failed") {
@@ -111,3 +139,4 @@ const connect = async () => {
 };
 
 connect();
+start();
