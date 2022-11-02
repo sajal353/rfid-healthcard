@@ -1,1 +1,1 @@
-start /min cmd /k serve -s client/build -l 3000 && yarn start
+start cmd /k serve -s client/build -l 3000 && yarn start
